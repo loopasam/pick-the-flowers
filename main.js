@@ -1,6 +1,6 @@
 // ---- Game config ----
 const GAME_W = 1024, GAME_H = 600;
-const FLOWER_COUNT = 8;
+const FLOWER_COUNT = 2;
 const COLORS = ['red', 'yellow', 'blue'];
 
 const config = {
@@ -9,7 +9,7 @@ const config = {
     height: GAME_H,
     backgroundColor: 0xcfeecf, // soft green
     parent: 'game',
-    physics: { default: 'arcade', arcade: { debug: false } },
+    physics: { default: 'arcade', arcade: { debug: true } },
     scene: { preload, create, update }
 };
 
@@ -27,6 +27,7 @@ function makeCircleTexture(scene, key, radius, fill) {
     g.generateTexture(key, radius * 2, radius * 2);
     g.destroy();
 }
+
 function makeButterflyTexture(scene, key) {
     const g = scene.add.graphics();
     g.fillStyle(0x8a6cff, 1);
@@ -153,14 +154,39 @@ function celebrate() {
     // Butterfly float + show restart button after a short delay
     butterfly.visible = true;
     butterfly.x = GAME_W / 2; butterfly.y = GAME_H - 120; butterfly.angle = 0;
-    this.tweens.timeline({
-        tweens: [
-            { targets: butterfly, y: 120, duration: 2000, ease: 'Sine.easeInOut' },
-            { targets: butterfly, angle: 12, duration: 600, ease: 'Sine.easeInOut' },
-            { targets: butterfly, angle: -12, duration: 600, ease: 'Sine.easeInOut' },
-            { targets: butterfly, angle: 0, duration: 400, ease: 'Sine.easeInOut' },
-        ]
+    
+    // Create chained tweens for Phaser 3
+    const tween1 = this.tweens.add({
+        targets: butterfly,
+        y: 120,
+        duration: 2000,
+        ease: 'Sine.easeInOut'
     });
+    
+    const tween2 = this.tweens.add({
+        targets: butterfly,
+        angle: 12,
+        duration: 600,
+        ease: 'Sine.easeInOut',
+        delay: 2000
+    });
+    
+    const tween3 = this.tweens.add({
+        targets: butterfly,
+        angle: -12,
+        duration: 600,
+        ease: 'Sine.easeInOut',
+        delay: 2600
+    });
+    
+    const tween4 = this.tweens.add({
+        targets: butterfly,
+        angle: 0,
+        duration: 400,
+        ease: 'Sine.easeInOut',
+        delay: 3200
+    });
+    
     // Show button after a beat
     this.time.delayedCall(800, () => {
         restartBtn.style.display = 'inline-block';
