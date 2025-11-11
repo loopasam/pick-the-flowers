@@ -278,6 +278,11 @@
                 <label for="fontSize">Font Size:</label>
                 <input type="number" id="fontSize" value="12" min="6" max="32">
             </div>
+            
+            <div class="control-group">
+                <label for="zoomLevel">Zoom Level:</label>
+                <input type="number" id="zoomLevel" value="4" min="1" max="20" step="1">
+            </div>
         </div>
         
         <div class="button-group">
@@ -311,10 +316,12 @@
                 reader.onload = function(event) {
                     image = new Image();
                     image.onload = function() {
-                        canvas.width = image.width;
-                        canvas.height = image.height;
-                        ctx.drawImage(image, 0, 0);
-                        updateInfo('Image loaded', `${image.width}x${image.height} pixels`);
+                        const zoom = parseInt(document.getElementById('zoomLevel').value);
+                        canvas.width = image.width * zoom;
+                        canvas.height = image.height * zoom;
+                        ctx.imageSmoothingEnabled = false; // Pixelated scaling
+                        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+                        updateInfo('Image loaded', `${image.width}x${image.height} pixels (${zoom}x zoom)`);
                     };
                     image.src = event.target.result;
                 };
@@ -330,9 +337,10 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            const tileWidth = parseInt(document.getElementById('tileWidth').value);
-            const tileHeight = parseInt(document.getElementById('tileHeight').value);
-            const spacing = parseInt(document.getElementById('spacing').value);
+            const zoom = parseInt(document.getElementById('zoomLevel').value);
+            const tileWidth = parseInt(document.getElementById('tileWidth').value) * zoom;
+            const tileHeight = parseInt(document.getElementById('tileHeight').value) * zoom;
+            const spacing = parseInt(document.getElementById('spacing').value) * zoom;
             
             const col = Math.floor(x / (tileWidth + spacing));
             const row = Math.floor(y / (tileHeight + spacing));
@@ -352,16 +360,19 @@
                 return;
             }
             
-            // Redraw original image
-            ctx.drawImage(image, 0, 0);
+            const zoom = parseInt(document.getElementById('zoomLevel').value);
             
-            const tileWidth = parseInt(document.getElementById('tileWidth').value);
-            const tileHeight = parseInt(document.getElementById('tileHeight').value);
-            const spacing = parseInt(document.getElementById('spacing').value);
+            // Redraw original image scaled
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            
+            const tileWidth = parseInt(document.getElementById('tileWidth').value) * zoom;
+            const tileHeight = parseInt(document.getElementById('tileHeight').value) * zoom;
+            const spacing = parseInt(document.getElementById('spacing').value) * zoom;
             const gridColor = document.getElementById('gridColor').value;
             const textColor = document.getElementById('textColor').value;
             const gridWidth = parseInt(document.getElementById('gridWidth').value);
-            const fontSize = parseInt(document.getElementById('fontSize').value);
+            const fontSize = parseInt(document.getElementById('fontSize').value) * zoom;
             
             ctx.strokeStyle = gridColor;
             ctx.lineWidth = gridWidth;
@@ -416,7 +427,9 @@
                 alert('Please load an image first!');
                 return;
             }
-            ctx.drawImage(image, 0, 0);
+            const zoom = parseInt(document.getElementById('zoomLevel').value);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
             updateInfo('Grid cleared', 'Original image restored');
         }
         
