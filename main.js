@@ -7,7 +7,7 @@ const config = {
     type: Phaser.AUTO,
     width: GAME_W,
     height: GAME_H,
-    backgroundColor: 0xcfeecf, // soft green
+    // backgroundColor: 0xcfeecf, // soft green - replaced with tiled background
     parent: 'game',
     physics: { default: 'arcade', arcade: { debug: true } },
     scene: { preload, create, update }
@@ -39,9 +39,46 @@ function makeButterflyTexture(scene, key) {
     g.destroy();
 }
 
-function preload() { /* no external assets */ }
+function preload() { 
+    // Load grass tileset as spritesheet (16x16 pixel tiles with 1px borders)
+    this.load.spritesheet('grassTileset', 'art/Sprout Lands - Sprites - Basic pack/Tilesets/Grass.png', {
+        frameWidth: 16,
+        frameHeight: 16,
+        spacing: 1  // Account for 1px border between tiles
+    });
+}
 
 function create() {
+    // Extract a specific tile from the spritesheet and create a canvas texture
+    // Second from top (row 1), second from left (col 1) = frame 9 (assuming 8 columns)
+    const TILE_FRAME = 9; // Second row, second column
+    const TILE_SIZE = 16;
+    
+    // Get the source texture and frame
+    const texture = this.textures.get('grassTileset');
+    const frame = texture.get(TILE_FRAME);
+    
+    // Create a canvas to draw the single tile
+    const canvas = document.createElement('canvas');
+    canvas.width = TILE_SIZE;
+    canvas.height = TILE_SIZE;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw the specific tile from the spritesheet to the canvas
+    ctx.drawImage(
+        frame.source.image,
+        frame.cutX, frame.cutY, TILE_SIZE, TILE_SIZE,
+        0, 0, TILE_SIZE, TILE_SIZE
+    );
+    
+    // Create a texture from the canvas
+    this.textures.addCanvas('singleGrassTile', canvas);
+    
+    // Add tiled grass background using the single extracted tile
+    this.add.tileSprite(0, 0, GAME_W, GAME_H, 'singleGrassTile')
+        .setOrigin(0, 0)
+        .setDepth(-1);
+
     // Create placeholder textures
     makeCircleTexture(this, 'playerCircle', 18, 0x1fbfbe);  // teal
     makeCircleTexture(this, 'flower_red', 14, 0xff4d4d);
