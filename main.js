@@ -44,14 +44,13 @@ function preload() {
     this.load.spritesheet('grassTileset', 'art/Sprout Lands - Sprites - Basic pack/Tilesets/Grass.png', {
         frameWidth: 16,
         frameHeight: 16,
-        spacing: 1  // Account for 1px border between tiles
     });
 }
 
 function create() {
     // Extract a specific tile from the spritesheet and create a canvas texture
     // Second from top (row 1), second from left (col 1) = frame 9 (assuming 8 columns)
-    const TILE_FRAME = 9; // Second row, second column
+    const TILE_FRAME = 60; // Second row, second column
     const TILE_SIZE = 16;
     
     // Get the source texture and frame
