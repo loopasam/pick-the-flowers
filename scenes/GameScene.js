@@ -170,13 +170,20 @@ export class GameScene extends Phaser.Scene {
             const color = flowerObj.getData('color');
             this.collectedByColor[color] = (this.collectedByColor[color] || 0) + 1;
             this.picked++;
+            
+            // Award points based on flower color and emit event to UIScene
+            const points = { red: 10, yellow: 15, blue: 20 };
+            this.events.emit('addScore', points[color] || 10);
+            
             flowerObj.destroy();
             this.updateCounterText();
+            
             if (this.picked >= FLOWER_COUNT) this.celebrate();
         });
     }
 
     createUI() {
+        // Flower counter (top-left)
         this.countText = this.add.text(16, 16, '', {
             fontFamily: 'system-ui, Arial, sans-serif',
             fontSize: '32px',
