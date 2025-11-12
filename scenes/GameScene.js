@@ -1,4 +1,4 @@
-import { GAME_W, GAME_H, TILE_SIZE, FLOWER_COUNT, COLORS, PLAYER_SPEED, TILE_SCALE, TILES_X, TILES_Y } from '../config.js';
+import { MAP_W, MAP_H, TILE_SIZE, FLOWER_COUNT, COLORS, PLAYER_SPEED, TILES_X, TILES_Y } from '../config.js';
 import { makeCircleTexture, makeButterflyTexture, createFlowerTextures } from '../utils/textureGenerator.js';
 
 export class GameScene extends Phaser.Scene {
@@ -31,7 +31,7 @@ export class GameScene extends Phaser.Scene {
 
     create() {
         // Set physics world bounds to match game world
-        this.physics.world.setBounds(0, 0, GAME_W, GAME_H);
+        this.physics.world.setBounds(0, 0, MAP_W, MAP_H);
         
         // Create terrain
         this.createTerrain();
@@ -82,7 +82,7 @@ export class GameScene extends Phaser.Scene {
     generateTerrainData(width, height) {
         // Generate a varied terrain using different grass tiles
         const terrain = [];
-        const grassTiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; // Grass tileset indices
+        const grassTiles = [55, 56, 57, 58, 59, 60]; // Grass tileset indices (55-60)
         
         for (let y = 0; y < height; y++) {
             const row = [];
@@ -91,13 +91,13 @@ export class GameScene extends Phaser.Scene {
                 const rand = Math.random();
                 let tileIndex;
                 if (rand < 0.7) {
-                    tileIndex = 0; // Most common grass
+                    tileIndex = 55; // Most common grass
                 } else if (rand < 0.85) {
-                    tileIndex = 1; // Some variety
+                    tileIndex = 56; // Some variety
                 } else if (rand < 0.95) {
-                    tileIndex = 2; // More variety
+                    tileIndex = 57; // More variety
                 } else {
-                    tileIndex = Math.floor(Math.random() * 12); // Occasional random tile
+                    tileIndex = grassTiles[Math.floor(Math.random() * grassTiles.length)]; // Random tile from 55-60
                 }
                 row.push(tileIndex);
             }
@@ -195,33 +195,28 @@ export class GameScene extends Phaser.Scene {
     }
 
     createPlayer() {
-        this.player = this.physics.add.sprite(GAME_W / 2, GAME_H / 2, 'character', 13);
+        this.player = this.physics.add.sprite(MAP_W / 2, MAP_H / 2, 'character', 13);
         this.player.body.setSize(12, 12);
         this.player.body.setOffset(2, 4);
         this.player.setCollideWorldBounds(true);
         this.player.setData('lastDirection', 'down');
         this.player.play('idle-down');
         
-        // Setup camera zoom - zoom to show scaled tiles
-        this.cameras.main.setZoom(TILE_SCALE);
-        this.cameras.main.setBounds(0, 0, GAME_W, GAME_H);
-        // Center camera on the map (no follow needed since whole map is visible)
-        this.cameras.main.centerOn(GAME_W / 2, GAME_H / 2);
+        // No zoom needed - map fits design canvas exactly
+        this.cameras.main.setBounds(0, 0, MAP_W, MAP_H);
+        this.cameras.main.centerOn(MAP_W / 2, MAP_H / 2);
     }
 
     setupInput() {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.input.keyboard.addKeys('W,A,S,D');
         this.input.on('pointerdown', (p) => {
-            // Convert screen coordinates to world coordinates
-            const worldX = this.cameras.main.scrollX + p.x / TILE_SCALE;
-            const worldY = this.cameras.main.scrollY + p.y / TILE_SCALE;
-            
-            // Clamp coordinates within world bounds
-            const clampedX = Phaser.Math.Clamp(worldX, 0, GAME_W);
-            const clampedY = Phaser.Math.Clamp(worldY, 0, GAME_H);
-            
-            this.pointerTarget = new Phaser.Math.Vector2(clampedX, clampedY);
+            // Phaser.FIT handles coordinate conversion automatically
+            const worldPoint = this.cameras.main.getWorldPoint(p.x, p.y);
+            this.pointerTarget = new Phaser.Math.Vector2(
+                Phaser.Math.Clamp(worldPoint.x, 0, MAP_W),
+                Phaser.Math.Clamp(worldPoint.y, 0, MAP_H)
+            );
         });
         this.input.on('pointerup', () => {
             // keep moving to target until close
@@ -238,8 +233,8 @@ export class GameScene extends Phaser.Scene {
         for (let i = 0; i < FLOWER_COUNT; i++) {
             const color = COLORS[rng.Between(0, COLORS.length - 1)];
             const txKey = 'flower_' + color;
-            const x = rng.Between(padding, GAME_W - padding);
-            const y = rng.Between(padding, GAME_H - padding);
+            const x = rng.Between(padding, MAP_W - padding);
+            const y = rng.Between(padding, MAP_H - padding);
             const f = this.flowers.create(x, y, txKey);
             
             // Gentle idle pulse via tween
@@ -285,7 +280,7 @@ export class GameScene extends Phaser.Scene {
         this.hintText.setScrollFactor(0); // Fixed to camera
 
         // Butterfly (hidden until win)
-        this.butterfly = this.add.sprite(GAME_W / 2, GAME_H / 2, 'butterfly');
+        this.butterfly = this.add.sprite(MAP_W / 2, MAP_H / 2, 'butterfly');
         this.butterfly.visible = false;
 
         // Initial counter
@@ -378,8 +373,8 @@ export class GameScene extends Phaser.Scene {
     celebrate() {
         // Butterfly float + show restart button after a short delay
         this.butterfly.visible = true;
-        this.butterfly.x = GAME_W / 2;
-        this.butterfly.y = GAME_H - 120;
+        this.butterfly.x = MAP_W / 2;
+        this.butterfly.y = MAP_H - 120;
         this.butterfly.angle = 0;
         
         // Create chained tweens for Phaser 3
@@ -436,8 +431,8 @@ export class GameScene extends Phaser.Scene {
         for (let i = 0; i < FLOWER_COUNT; i++) {
             const color = COLORS[rng.Between(0, COLORS.length - 1)];
             const txKey = 'flower_' + color;
-            const x = rng.Between(padding, GAME_W - padding);
-            const y = rng.Between(padding, GAME_H - padding);
+            const x = rng.Between(padding, MAP_W - padding);
+            const y = rng.Between(padding, MAP_H - padding);
             const f = this.flowers.create(x, y, txKey);
             this.tweens.add({
                 targets: f,
@@ -451,7 +446,7 @@ export class GameScene extends Phaser.Scene {
         }
         
         // Keep player inside screen & stop movement
-        this.player.setPosition(GAME_W / 2, GAME_H / 2);
+        this.player.setPosition(MAP_W / 2, MAP_H / 2);
         this.player.setVelocity(0, 0);
         this.pointerTarget = null;
     }
