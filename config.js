@@ -4,15 +4,15 @@ export const DESIGN_H = 720;
 
 // Tile configuration
 export const TILE_SIZE = 16;
-export const TILES_X = 40;  // Reduced for better character visibility
-export const TILES_Y = 25;  // Reduced for better character visibility
+export const TILES_X = 80;  // 1280 / 16
+export const TILES_Y = 45;  // 720 / 16
 
 // Map dimensions match design canvas exactly
 export const MAP_W = TILES_X * TILE_SIZE;  // 1280px
 export const MAP_H = TILES_Y * TILE_SIZE;  // 720px
 
 // Game settings
-export const FLOWER_COUNT = 8;  // Adjusted for smaller map
+export const FLOWER_COUNT = 2;  // Increased for larger map
 export const COLORS = ['red', 'yellow', 'blue'];
 export const PLAYER_SPEED = 200;
 
