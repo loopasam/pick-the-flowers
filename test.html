@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Phaser + HTML HUD</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body { height: 100%; margin: 0; background:#0b0b0d; }
+    /* The game + HUD live inside this container */
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #0b0b0d;
+    }
+
+    /* HUD layer on top of the canvas */
+    #hud {
+      position: absolute;
+      inset: 0;                /* stretch to container; we’ll place children inside */
+      pointer-events: none;    /* let clicks pass through unless you enable on a child */
+      font-family: system-ui, Arial, sans-serif;
+      color: #fff;
+    }
+
+    /* Example HUD items */
+    .score {
+      position: absolute; top: 16px; left: 16px;
+      font-size: 28px; line-height: 1;
+      text-shadow: 0 2px 0 #000, 0 0 6px rgba(0,0,0,0.6);
+    }
+    .hint {
+      position: absolute; top: 56px; left: 16px;
+      font-size: 18px;
+      opacity: 0.9;
+      text-shadow: 0 2px 0 #000, 0 0 6px rgba(0,0,0,0.6);
+    }
+
+    .btnbar {
+      position: absolute; bottom: 16px; right: 16px;
+      display: flex; gap: 8px;
+      pointer-events: auto; /* enable interaction for buttons */
+    }
+    .btnbar button {
+      background: #10b981; color: #04120e; border: 0;
+      border-radius: 10px; padding: 10px 14px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    }
+    .btnbar button:active { transform: translateY(1px); }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- Phaser mounts its canvas here -->
+    <div id="game"></div>
+
+    <!-- HTML HUD overlay -->
+    <div id="hud">
+      <div class="score">Score: <span id="score-value">0</span></div>
+      <div class="hint">Pick all the flowers!</div>
+      <div class="btnbar">
+        <button id="restart">Restart</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phaser -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+  <!-- Your game code -->
+  <script type="module" src="./test.js"></script>
+</body>
+</html>
