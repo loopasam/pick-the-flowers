@@ -1,5 +1,5 @@
 import { MAP_W, MAP_H, TILE_SIZE, FLOWER_COUNT, COLORS, PLAYER_SPEED, TILES_X, TILES_Y } from '../config.js';
-import { makeCircleTexture, makeButterflyTexture, createFlowerTextures } from '../utils/textureGenerator.js';
+import { makeCircleTexture, makeButterflyTexture } from '../utils/textureGenerator.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -25,6 +25,12 @@ export class GameScene extends Phaser.Scene {
 
         // Load character spritesheet (16x16 pixel frames in a grid)
         this.load.spritesheet('character', 'art/Sprout Lands - Sprites - Basic pack/Characters/Basic Charakter Spritesheet.png', {
+            frameWidth: 16,
+            frameHeight: 16
+        });
+
+        // Load objects spritesheet for flowers and mushrooms (16x16 pixel frames in a grid)
+        this.load.spritesheet('objects', 'art/Sprout Lands - Sprites - Basic pack/Objects/Basic_Grass_Biom_things.png', {
             frameWidth: 16,
             frameHeight: 16
         });
@@ -96,8 +102,13 @@ export class GameScene extends Phaser.Scene {
 
     createTextures() {
         makeCircleTexture(this, 'playerCircle', 18, 0x1fbfbe);
-        createFlowerTextures(this);
         makeButterflyTexture(this, 'butterfly');
+        
+        // Create particle textures for pickup effects
+        makeCircleTexture(this, 'particle_red', 3, 0xff4d4d);
+        makeCircleTexture(this, 'particle_yellow', 3, 0xffe24d);
+        makeCircleTexture(this, 'particle_blue', 3, 0xff69b4);
+        
         this.createCharacterAnimations();
     }
 
@@ -146,12 +157,19 @@ export class GameScene extends Phaser.Scene {
         const rng = this.random || Phaser.Math;
         const padding = TILE_SIZE * 3;
 
+        // Map colors to spritesheet frame indices
+        const colorToFrame = {
+            red: 6,      // red mushroom
+            yellow: 25,  // yellow flower
+            blue: 34     // pink flower
+        };
+
         for (let i = 0; i < FLOWER_COUNT; i++) {
             const color = COLORS[rng.Between(0, COLORS.length - 1)];
-            const txKey = 'flower_' + color;
+            const frameIndex = colorToFrame[color];
             const x = rng.Between(padding, MAP_W - padding);
             const y = rng.Between(padding, MAP_H - padding);
-            const f = this.flowers.create(x, y, txKey);
+            const f = this.flowers.create(x, y, 'objects', frameIndex);
 
             this.tweens.add({
                 targets: f,
@@ -167,6 +185,10 @@ export class GameScene extends Phaser.Scene {
 
     setupCollision() {
         this.physics.add.overlap(this.player, this.flowers, (playerObj, flowerObj) => {
+            // Prevent multiple pickups of the same flower
+            if (flowerObj.getData('collected')) return;
+            flowerObj.setData('collected', true);
+            
             const color = flowerObj.getData('color');
             this.collectedByColor[color] = (this.collectedByColor[color] || 0) + 1;
             this.picked++;
@@ -175,10 +197,62 @@ export class GameScene extends Phaser.Scene {
             const points = { red: 10, yellow: 15, blue: 20 };
             this.events.emit('addScore', points[color] || 10);
             
-            flowerObj.destroy();
+            // Play pickup effect before destroying
+            this.playPickupEffect(flowerObj, color);
+            
             this.updateCounterText();
             
             if (this.picked >= FLOWER_COUNT) this.celebrate();
+        });
+    }
+
+    playPickupEffect(flowerObj, color) {
+        // Disable physics body to prevent further collisions
+        if (flowerObj.body) {
+            flowerObj.body.enable = false;
+        }
+        
+        // Stop the idle bobbing animation
+        this.tweens.killTweensOf(flowerObj);
+        
+        const x = flowerObj.x;
+        const y = flowerObj.y;
+        
+        // Create particle burst effect
+        const particleCount = 8;
+        const particleKey = 'particle_' + color;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * Math.PI * 2;
+            const speed = 60 + Math.random() * 40;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            
+            const particle = this.add.sprite(x, y, particleKey);
+            particle.setScale(1.5);
+            
+            // Animate particles outward and fade
+            this.tweens.add({
+                targets: particle,
+                x: x + vx,
+                y: y + vy,
+                alpha: 0,
+                scale: 0.5,
+                duration: 500,
+                ease: 'Cubic.easeOut',
+                onComplete: () => particle.destroy()
+            });
+        }
+        
+        // Float and fade the flower
+        this.tweens.add({
+            targets: flowerObj,
+            y: flowerObj.y - 40,
+            alpha: 0,
+            scale: 1.5,
+            duration: 500,
+            ease: 'Cubic.easeOut',
+            onComplete: () => flowerObj.destroy()
         });
     }
 

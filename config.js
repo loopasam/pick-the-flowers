@@ -12,7 +12,7 @@ export const MAP_W = TILES_X * TILE_SIZE;  // 1280px
 export const MAP_H = TILES_Y * TILE_SIZE;  // 720px
 
 // Game settings
-export const FLOWER_COUNT = 2;  // Increased for larger map
+export const FLOWER_COUNT = 20;  // Increased for larger map
 export const COLORS = ['red', 'yellow', 'blue'];
 export const PLAYER_SPEED = 200;
 
