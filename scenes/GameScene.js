@@ -1,5 +1,5 @@
 import { MAP_W, MAP_H, TILE_SIZE, FLOWER_COUNT, COLORS, PLAYER_SPEED, TILES_X, TILES_Y } from '../config.js';
-import { makeCircleTexture, makeButterflyTexture } from '../utils/textureGenerator.js';
+import { makeCircleTexture } from '../utils/textureGenerator.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -9,14 +9,12 @@ export class GameScene extends Phaser.Scene {
         this.player = null;
         this.cursors = null;
         this.keys = null;
-        this.pointerTarget = null;
         this.flowers = null;
         this.picked = 0;
-        this.collectedByColor = { red: 0, yellow: 0, blue: 0 };
-        this.countText = null;
-        this.hintText = null;
-        this.butterfly = null;
-        this.uiContainer = null;
+        
+        // Ordered flower picking logic
+        this.flowerSequence = [];  // Ordered list of flower types to pick
+        this.currentFlowerIndex = 0;  // Current position in the sequence
     }
 
     preload() {
@@ -57,14 +55,10 @@ export class GameScene extends Phaser.Scene {
         cam.setRoundPixels(true);
         cam.setZoom(ZOOM);
 
-        // Keep zoom and UI consistent on window resize
+        // Keep zoom consistent on window resize
         this.scale.on('resize', (gameSize) => {
             cam.setZoom(ZOOM);
-            this.positionUI(gameSize.width, gameSize.height);
         });
-
-        // Initial HUD position
-        this.positionUI(this.scale.width, this.scale.height);
     }
 
     createTerrain() {
@@ -102,7 +96,6 @@ export class GameScene extends Phaser.Scene {
 
     createTextures() {
         makeCircleTexture(this, 'playerCircle', 18, 0x1fbfbe);
-        makeButterflyTexture(this, 'butterfly');
         
         // Create particle textures for pickup effects
         makeCircleTexture(this, 'particle_red', 3, 0xff4d4d);
@@ -132,6 +125,9 @@ export class GameScene extends Phaser.Scene {
         this.player.setCollideWorldBounds(true);
         this.player.setData('lastDirection', 'down');
         this.player.play('idle-down');
+        
+        // Set player depth higher than flowers so it renders on top
+        this.player.setDepth(10);
     }
 
     setupInput() {
@@ -141,14 +137,6 @@ export class GameScene extends Phaser.Scene {
             A: Phaser.Input.Keyboard.KeyCodes.A,
             S: Phaser.Input.Keyboard.KeyCodes.S,
             D: Phaser.Input.Keyboard.KeyCodes.D,
-        });
-
-        this.input.on('pointerdown', (p) => {
-            const worldPoint = this.cameras.main.getWorldPoint(p.x, p.y);
-            this.pointerTarget = new Phaser.Math.Vector2(
-                Phaser.Math.Clamp(worldPoint.x, 0, MAP_W),
-                Phaser.Math.Clamp(worldPoint.y, 0, MAP_H)
-            );
         });
     }
 
@@ -164,12 +152,28 @@ export class GameScene extends Phaser.Scene {
             blue: 34     // pink flower
         };
 
+        // Generate random ordered sequence of flower types
+        this.flowerSequence = [];
         for (let i = 0; i < FLOWER_COUNT; i++) {
             const color = COLORS[rng.Between(0, COLORS.length - 1)];
+            this.flowerSequence.push(color);
+        }
+
+        // Place flowers on terrain based on the sequence
+        for (let i = 0; i < FLOWER_COUNT; i++) {
+            const color = this.flowerSequence[i];
             const frameIndex = colorToFrame[color];
             const x = rng.Between(padding, MAP_W - padding);
             const y = rng.Between(padding, MAP_H - padding);
             const f = this.flowers.create(x, y, 'objects', frameIndex);
+
+            // Adjust collision body to be tighter around the flower
+            // Make it smaller than the full sprite (16x16)
+            f.body.setSize(10, 10);
+            f.body.setOffset(3, 3);
+            
+            // Set depth lower than player so flowers render behind character
+            f.setDepth(0);
 
             this.tweens.add({
                 targets: f,
@@ -180,30 +184,66 @@ export class GameScene extends Phaser.Scene {
                 ease: 'Sine.easeInOut'
             });
             f.setData('color', color);
+            f.setData('sequenceIndex', i);  // Track position in sequence
         }
+
+        // Initialize current flower index to 0
+        this.currentFlowerIndex = 0;
+
+        // Emit event to UIScene to show the first flower to pick
+        this.events.emit('updateTargetFlower', this.flowerSequence[0]);
     }
 
     setupCollision() {
-        this.physics.add.overlap(this.player, this.flowers, (playerObj, flowerObj) => {
-            // Prevent multiple pickups of the same flower
-            if (flowerObj.getData('collected')) return;
-            flowerObj.setData('collected', true);
-            
-            const color = flowerObj.getData('color');
-            this.collectedByColor[color] = (this.collectedByColor[color] || 0) + 1;
-            this.picked++;
-            
-            // Award points based on flower color and emit event to UIScene
-            const points = { red: 10, yellow: 15, blue: 20 };
-            this.events.emit('addScore', points[color] || 10);
-            
-            // Play pickup effect before destroying
-            this.playPickupEffect(flowerObj, color);
-            
-            this.updateCounterText();
-            
-            if (this.picked >= FLOWER_COUNT) this.celebrate();
-        });
+        // Use collider instead of overlap to enable blocking behavior
+        // The processCallback determines if collision should occur
+        this.physics.add.collider(
+            this.player, 
+            this.flowers,
+            // collideCallback - called when collision occurs
+            (playerObj, flowerObj) => {
+                // Prevent multiple pickups of the same flower
+                if (flowerObj.getData('collected')) return;
+                
+                const color = flowerObj.getData('color');
+                const targetColor = this.flowerSequence[this.currentFlowerIndex];
+                
+                // Only allow pickup if it matches the current target flower
+                if (color !== targetColor) {
+                    return;  // Wrong flower type - collision blocks player
+                }
+                
+                flowerObj.setData('collected', true);
+                this.picked++;
+                
+                // Play pickup effect before destroying
+                this.playPickupEffect(flowerObj, color);
+                
+                // Move to next flower in sequence
+                this.currentFlowerIndex++;
+                
+                // Check if game is complete
+                if (this.currentFlowerIndex >= FLOWER_COUNT) {
+                    this.celebrate();
+                } else {
+                    // Update UI to show next flower to pick
+                    this.events.emit('updateTargetFlower', this.flowerSequence[this.currentFlowerIndex]);
+                }
+            },
+            // processCallback - determines if collision should happen
+            (playerObj, flowerObj) => {
+                // Don't collide with already collected flowers
+                if (flowerObj.getData('collected')) return false;
+                
+                const color = flowerObj.getData('color');
+                const targetColor = this.flowerSequence[this.currentFlowerIndex];
+                
+                // Always collide (block or allow pickup)
+                // If it's the target flower, collision callback will handle pickup
+                // If it's not the target flower, collision will block the player
+                return true;
+            }
+        );
     }
 
     playPickupEffect(flowerObj, color) {
@@ -257,32 +297,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     createUI() {
-        // Flower counter (top-left)
-        this.countText = this.add.text(16, 16, '', {
-            fontFamily: 'system-ui, Arial, sans-serif',
-            fontSize: '32px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0, 0).setScrollFactor(0).setDepth(1000);
-
-        this.hintText = this.add.text(16, 56, 'Pick all the flowers!', {
-            fontFamily: 'system-ui, Arial, sans-serif',
-            fontSize: '20px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0, 0).setScrollFactor(0).setDepth(1000);
-
-        this.butterfly = this.add.sprite(MAP_W / 2, MAP_H / 2, 'butterfly');
-        this.butterfly.visible = false;
-
-        this.updateCounterText();
-    }
-
-    positionUI(viewW, viewH) {
-        this.countText.setPosition(16, 16);
-        this.hintText.setPosition(16, 56);
+        // UI elements will be handled by UIScene
     }
 
     update(time, delta) {
@@ -298,29 +313,12 @@ export class GameScene extends Phaser.Scene {
         if (up) vy -= 1;
         if (down) vy += 1;
 
-        if (vx === 0 && vy === 0 && this.pointerTarget) {
-            const dir = new Phaser.Math.Vector2(
-                this.pointerTarget.x - this.player.x,
-                this.pointerTarget.y - this.player.y
-            );
-            const dist = dir.length();
-            if (dist < 6) {
-                this.player.setVelocity(0, 0);
-                this.pointerTarget = null;
-            } else {
-                dir.normalize();
-                this.player.setVelocity(dir.x * PLAYER_SPEED, dir.y * PLAYER_SPEED);
-                vx = dir.x;
-                vy = dir.y;
-            }
-        } else {
-            if (vx !== 0 || vy !== 0) {
-                const len = Math.hypot(vx, vy);
-                vx = (vx / len) * PLAYER_SPEED;
-                vy = (vy / len) * PLAYER_SPEED;
-            }
-            this.player.setVelocity(vx, vy);
+        if (vx !== 0 || vy !== 0) {
+            const len = Math.hypot(vx, vy);
+            vx = (vx / len) * PLAYER_SPEED;
+            vy = (vy / len) * PLAYER_SPEED;
         }
+        this.player.setVelocity(vx, vy);
 
         this.updatePlayerAnimation(vx, vy);
     }
@@ -343,20 +341,19 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    updateCounterText() {
-        this.countText.setText(`Flowers: ${this.picked} / ${FLOWER_COUNT}`);
+    celebrate() {
+        // Emit game complete event to UIScene
+        this.events.emit('gameComplete');
     }
 
-    celebrate() {
-        this.butterfly.visible = true;
-        this.butterfly.x = MAP_W / 2;
-        this.butterfly.y = MAP_H - 120;
-        this.butterfly.angle = 0;
-
-        this.tweens.add({ targets: this.butterfly, y: 120, duration: 2000, ease: 'Sine.easeInOut' });
-        this.tweens.add({ targets: this.butterfly, angle: 12, duration: 600, ease: 'Sine.easeInOut', delay: 2000 });
-        this.tweens.add({ targets: this.butterfly, angle: -12, duration: 600, ease: 'Sine.easeInOut', delay: 2600 });
-        this.tweens.add({ targets: this.butterfly, angle: 0, duration: 400, ease: 'Sine.easeInOut', delay: 3200 });
+    restartGame() {
+        // Reset game state
+        this.picked = 0;
+        this.currentFlowerIndex = 0;
+        this.flowerSequence = [];
+        
+        // Restart the scene
+        this.scene.restart();
     }
 
 }
