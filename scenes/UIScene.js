@@ -7,6 +7,11 @@ export class UIScene extends Phaser.Scene {
         this.targetFlowerBox = null;
     }
 
+    preload() {
+        // Load applause sound for victory confetti
+        this.load.audio('applause', 'sounds/LOA_FX_Applause5.wav');
+    }
+
     create() {
         // Get reference to GameScene
         const gameScene = this.scene.get('GameScene');
@@ -80,6 +85,9 @@ export class UIScene extends Phaser.Scene {
     }
 
     showGameComplete() {
+        // Play applause sound when confetti starts!
+        this.sound.play('applause', { volume: 0.6 });
+        
         // Hide the target flower display
         if (this.targetFlowerSprite) {
             this.targetFlowerSprite.destroy();
