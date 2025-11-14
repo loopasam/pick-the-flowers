@@ -11,15 +11,9 @@ export class EndGameScene extends Phaser.Scene {
             frameWidth: 16,
             frameHeight: 16
         });
-        
-        // Load applause sound for winning
-        this.load.audio('applause', 'sounds/LOA_FX_Applause5.wav');
     }
 
     create() {
-        // Play applause sound when player wins
-        this.sound.play('applause', { volume: 0.6 });
-        
         // Create semi-transparent overlay
         const overlay = this.add.rectangle(MAP_W / 2, MAP_H / 2, MAP_W, MAP_H, 0x000000, 0.8);
         overlay.setScrollFactor(0);
