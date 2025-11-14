@@ -32,6 +32,12 @@ export class GameScene extends Phaser.Scene {
             frameWidth: 16,
             frameHeight: 16
         });
+
+        // Load background music
+        this.load.audio('soundtrack', 'sounds/XMV_100_Gmaj_Garden_Marimba_02.wav');
+        
+        // Load pickup sound effect
+        this.load.audio('pickup', 'sounds/PR_Instrument_Xylophone_Notification_2_CT.wav');
     }
 
     create() {
@@ -59,6 +65,13 @@ export class GameScene extends Phaser.Scene {
         this.scale.on('resize', (gameSize) => {
             cam.setZoom(ZOOM);
         });
+
+        // Start background music as a loop
+        this.backgroundMusic = this.sound.add('soundtrack', {
+            loop: true,
+            volume: 0.5
+        });
+        this.backgroundMusic.play();
     }
 
     createTerrain() {
@@ -284,6 +297,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     playPickupEffect(flowerObj, color) {
+        // Play pickup sound effect
+        this.sound.play('pickup', { volume: 0.7 });
+        
         // Disable physics body to prevent further collisions
         if (flowerObj.body) {
             flowerObj.body.enable = false;

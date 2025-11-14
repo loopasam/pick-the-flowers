@@ -6,7 +6,6 @@ https://www.reddit.com/r/phaser/comments/11dm06a/how_are_the_ui_components_in_ph
 
 # TODO
 
-- Better terrain generation
 - Add sound effects
 - Deploy to GH pages
 
