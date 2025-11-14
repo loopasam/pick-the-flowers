@@ -21,7 +21,7 @@ export const gameConfig = {
     parent: 'game',
     width: DESIGN_W,
     height: DESIGN_H,
-    backgroundColor: 0x008080,
+    backgroundColor: 0x5fc75d,  // Teal/green grass color matching the tiles
     physics: { 
         default: 'arcade', 
         arcade: { 

@@ -77,16 +77,53 @@ export class GameScene extends Phaser.Scene {
 
     generateTerrainData(width, height) {
         const terrain = [];
-        const grassTiles = [55, 56, 57, 58, 59, 60];
+        // Tile 12 is the most common (75% chance)
+        // Other tiles share the remaining 25%
+        const otherMainLandTiles = [55, 56, 57, 58, 59, 60, 66, 67, 68, 69, 70, 71];
+        
         for (let y = 0; y < height; y++) {
             const row = [];
             for (let x = 0; x < width; x++) {
-                const rand = Math.random();
                 let tileIndex;
-                if (rand < 0.7) tileIndex = 55;
-                else if (rand < 0.85) tileIndex = 56;
-                else if (rand < 0.95) tileIndex = 57;
-                else tileIndex = grassTiles[Math.floor(Math.random() * grassTiles.length)];
+                
+                // Corners
+                if (x === 0 && y === 0) {
+                    // Top left corner
+                    tileIndex = 0;
+                } else if (x === 0 && y === height - 1) {
+                    // Bottom left corner
+                    tileIndex = 22;
+                } else if (x === width - 1 && y === height - 1) {
+                    // Bottom right corner
+                    tileIndex = 24;
+                } else if (x === width - 1 && y === 0) {
+                    // Top right corner
+                    tileIndex = 2;
+                }
+                // Borders
+                else if (y === 0) {
+                    // Top border
+                    tileIndex = 1;
+                } else if (y === height - 1) {
+                    // Bottom border
+                    tileIndex = 23;
+                } else if (x === 0) {
+                    // Left border
+                    tileIndex = 11;
+                } else if (x === width - 1) {
+                    // Right border
+                    tileIndex = 13;
+                }
+                // Main land (interior)
+                else {
+                    // 75% chance for tile 12, 25% chance for other tiles
+                    if (Math.random() < 0.75) {
+                        tileIndex = 12;
+                    } else {
+                        tileIndex = otherMainLandTiles[Math.floor(Math.random() * otherMainLandTiles.length)];
+                    }
+                }
+                
                 row.push(tileIndex);
             }
             terrain.push(row);
