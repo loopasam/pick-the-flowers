@@ -28,6 +28,14 @@ export class UIScene extends Phaser.Scene {
 
         // Listen for scene resize to reposition UI elements
         this.scale.on('resize', this.resize, this);
+
+        // Initialize with the first target flower if GameScene is ready
+        // This handles the case where GameScene emitted the event before UIScene was listening
+        this.time.delayedCall(0, () => {
+            if (gameScene.flowerSequence && gameScene.flowerSequence.length > 0) {
+                this.updateTargetFlower(gameScene.flowerSequence[0]);
+            }
+        });
     }
 
     updateTargetFlower(flowerColor) {
